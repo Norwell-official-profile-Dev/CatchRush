@@ -1,0 +1,641 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>Catch Rush+ — Final (v1.0)</title>
+
+<!-- Poppins font -->
+<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;700&display=swap" rel="stylesheet">
+
+<style>
+/* ================== Visual theme & layout ================== */
+:root{
+  --bg-1:#0f2f66; --bg-2:#2266d1; --accent:#ffbf47; --danger:#ff6060;
+  --hud-width:320px;
+}
+*{box-sizing:border-box;font-family:'Poppins',system-ui,Arial,sans-serif}
+body{ margin:18px; display:flex; flex-direction:column; align-items:center; gap:12px;
+  background:linear-gradient(180deg,var(--bg-1),var(--bg-2)); color:#fff; -webkit-font-smoothing:antialiased;
+}
+h1{ margin:0; font-size:20px; font-weight:700; letter-spacing:.6px }
+
+/* Game area (responsive but compact) */
+.game-area{ width:var(--hud-width); max-width:94vw; height:460px; border-radius:12px; position:relative;
+  background: radial-gradient(circle at 20% 10%, rgba(255,255,255,0.04), transparent 10%),
+             linear-gradient(180deg, rgba(255,255,255,0.02), rgba(0,0,0,0.06));
+  border:1px solid rgba(255,255,255,0.06); overflow:hidden; box-shadow:0 10px 30px rgba(0,0,0,0.45);
+  user-select:none;
+}
+
+/* HUD top */
+.hud{ position:absolute; left:10px; right:10px; top:8px; display:flex; justify-content:space-between; align-items:flex-start; gap:8px; z-index:150; }
+.hud .left{ display:flex; gap:8px; align-items:center; font-size:13px; flex-direction:column; align-items:flex-start; }
+.hud .score-row{ display:flex; align-items:center; gap:8px; }
+.hud .center { position:absolute; left:50%; transform:translateX(-50%); top:-2px; font-size:14px; font-weight:700; }
+.hud .level-badge{ margin-top:6px; background:rgba(0,0,0,0.18); padding:4px 8px; border-radius:8px; color:var(--accent); font-weight:700; font-size:12px; }
+
+/* stacked timers appear at right column */
+.timers{ display:flex; flex-direction:column; gap:6px; align-items:flex-end; font-size:12px; }
+.timer { padding:4px 8px; border-radius:8px; background:rgba(0,0,0,0.12); color:#fff; min-width:92px; text-align:right; font-weight:600; }
+.timer.hidden{ display:none; }
+.timer.warn { color:var(--danger); text-shadow:0 0 8px rgba(255,80,80,0.8); }
+
+/* speed note */
+.speed-note { position:absolute; left:10px; top:36px; font-size:12px; color:#eaf2ff; background:rgba(0,0,0,0.12); padding:4px 8px; border-radius:8px; opacity:0; transition:opacity .35s ease; z-index:160; }
+.speed-note.show{ opacity:1; }
+
+/* Next-level countdown below time */
+.next-level { position:absolute; left:50%; transform:translateX(-50%); top:28px; font-size:13px; color:#fff7cc; background:rgba(0,0,0,0.12); padding:4px 8px; border-radius:8px; opacity:0; transition:opacity .25s ease; z-index:155; }
+.next-level.show{ opacity:1; }
+
+/* basket */
+/* FIX: removed transform centering so JS can set exact left px coordinates (removes right-edge gap) */
+.basket{ position:absolute; bottom:14px; left:0; /* left is controlled by JS now */ width:68px; height:32px;
+  background:linear-gradient(180deg,#ffd07a,#ffb347); border-radius:12px; display:flex; align-items:center; justify-content:center;
+  color:#111; font-size:22px; box-shadow:0 6px 16px rgba(0,0,0,0.35); z-index:120; }
+
+/* falling item */
+.item{ position:absolute; width:30px; height:30px; font-size:22px; display:flex; align-items:center; justify-content:center; pointer-events:none; z-index:80; will-change:transform; }
+
+/* pop */
+.pop{ position:absolute; font-size:13px; font-weight:700; color:var(--accent); text-shadow:0 2px 6px rgba(0,0,0,0.45); z-index:200; opacity:0; transform:translateY(0); transition:all .45s ease-out; pointer-events:none; }
+
+/* overlay + start animation */
+.overlay{ position:absolute; inset:0; z-index:220; background: rgba(4,10,25,0.6); display:flex; align-items:center; justify-content:center; flex-direction:column; gap:14px; color:white; padding:18px; }
+.overlay.hidden{ display:none; }
+.start-title{ font-size:24px; font-weight:800; transform:scale(.95); opacity:0; transition:all .6s cubic-bezier(.2,.9,.2,1); }
+.start-title.show{ transform:scale(1); opacity:1; }
+.start-cta{ background:linear-gradient(180deg,#34d399,#10b981); border:none; padding:12px 16px; border-radius:12px; font-weight:700; color:#042014; cursor:pointer; transform:translateY(18px); opacity:0; transition:all .45s cubic-bezier(.2,.9,.2,1); }
+.start-cta.show{ transform:translateY(0); opacity:1; }
+.overlay .small{ font-size:12px; opacity:0.9; }
+
+/* controls / menu */
+.controls{ width:var(--hud-width); max-width:94vw; display:flex; justify-content:space-between; align-items:center; gap:10px; }
+.controls .left{ display:flex; gap:8px; }
+.btn-primary{ background:linear-gradient(180deg,#2ecc71,#28a745); border:none; color:#032013; padding:10px 12px; border-radius:8px; font-weight:700; cursor:pointer; }
+.btn-ghost{ background:transparent; border:1px solid rgba(255,255,255,0.10); color:#fff; padding:10px; border-radius:8px; cursor:pointer; }
+.icon-btn{ background:rgba(255,255,255,0.03); border:none; padding:8px; border-radius:8px; color:#fff; }
+
+/* menu */
+.menu-panel{ width:var(--hud-width); max-width:94vw; background:rgba(0,0,0,0.45); color:#fff; padding:12px; border-radius:10px; border:1px solid rgba(255,255,255,0.06); }
+
+/* responsive tweak */
+@media (max-width:360px){ :root{ --hud-width:300px } .game-area{ height:420px } .speed-note{ top:40px } }
+</style>
+</head>
+<body>
+
+<h1>Catch Rush+</h1>
+
+<!-- ========== GAME AREA ========== -->
+<div class="game-area" id="gameArea" aria-label="Catch Rush game">
+  <!-- HUD -->
+  <div class="hud">
+    <div class="left">
+      <div class="score-row">Score: <strong id="score" style="margin-left:8px">0</strong></div>
+      <!-- LEVEL moved below the score as requested -->
+      <div class="level-badge" style="margin-top:8px">Level <span id="levelDisplay">1</span></div>
+    </div>
+
+    <div class="center">Time: <span id="timeDisplay">00:00</span></div>
+
+    <div class="right timers">
+      <div id="shieldTimer" class="timer hidden">🛡️ Shield: 0s</div>
+      <div id="doubleTimer" class="timer hidden">🍋 Double: 0s</div>
+    </div>
+  </div>
+
+  <!-- Next level countdown (below time) -->
+  <div id="nextLevel" class="next-level" aria-hidden="true"></div>
+
+  <!-- speed note top-left -->
+  <div id="speedNote" class="speed-note" aria-hidden="true"></div>
+
+  <!-- basket -->
+  <div id="basket" class="basket">🧺</div>
+
+  <!-- pop container -->
+  <div id="popContainer" aria-hidden="true"></div>
+
+  <!-- start / pause overlay -->
+  <div id="overlay" class="overlay">
+    <div id="startScreen" style="display:flex;flex-direction:column;align-items:center;gap:12px">
+      <div id="startTitle" class="start-title">Catch Rush+</div>
+      <div style="display:flex;gap:8px">
+        <button id="startBtn" class="start-cta">Start Game</button>
+      </div>
+      <div class="small" style="font-size:13px;color:rgba(255,255,255,0.85)">Catch stars, avoid bombs. Shield and lemons give power-ups!</div>
+    </div>
+
+    <div id="pauseScreen" style="display:none;flex-direction:column;align-items:center;gap:12px">
+      <div style="font-size:18px;font-weight:700">Paused</div>
+      <div style="display:flex;gap:8px">
+        <button id="resumeBtn" class="btn-primary">Resume</button>
+        <button id="stopFromOverlay" class="btn-ghost">Stop</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Controls -->
+<div class="controls">
+  <div class="left">
+    <button id="menuBtn" class="btn-ghost">☰ Menu</button>
+    <button id="pauseBtn" class="icon-btn" style="display:none">⏸️ Pause</button>
+    <button id="stopBtn" class="btn-ghost" style="display:none">Stop</button>
+  </div>
+
+  <div class="right">
+    <button id="musicBtn" class="icon-btn">🎵</button>
+    <button id="vibrateBtn" class="icon-btn">🔔</button>
+  </div>
+</div>
+
+<!-- Menu with version & last updated -->
+<div id="menuPanel" class="menu-panel" style="display:none">
+  <div style="font-weight:700">About Catch Rush+</div>
+  <div style="margin-top:8px;font-size:13px">Use your mouse or tap to move the basket. Click/Tap to slide smoothly to a target. Missing 25 stars ends the game. Level increases every minute — spawn speed caps at level 5 to keep gameplay fair.</div>
+  <hr style="border:none;border-top:1px solid rgba(255,255,255,0.06);margin:10px 0">
+  <div style="font-size:13px">Version: <strong>1.0</strong></div>
+  <div style="font-size:13px">Last updated: <strong>August 11, 2025</strong></div>
+  <div style="margin-top:8px;font-size:13px">Report bugs: <a href="mailto:kael.official20@gmail.com" style="color:var(--accent)">kael.official20@gmail.com</a></div>
+</div>
+
+<div class="scorebar">High Score: <span id="highScore">0</span> | Missed: <span id="missed">0</span>/25</div>
+
+<!-- background music -->
+<audio id="bgMusic" loop preload="auto">
+  <source src="https://www.bensound.com/bensound-music/bensound-ukulele.mp3" type="audio/mpeg">
+</audio>
+
+<script>
+/* ================== Catch Rush+ v1.0 Final (Single file) ==================
+   - Preserves original gameplay behavior
+   - Fixes pause/resume disappearing-item bug
+   - Power-up timers get red warning at <=5s
+   - Level display moved below score
+   - "Next level in X..." countdown during last 10s (fades before 0)
+   - Speed note shows current Level (X) and spawn speed (ms)
+   - Comments use "=== SECTION ===" style for quick navigation
+   ======================================================================= */
+
+/* === CONFIG (tweak values here) === */
+const CONFIG = {
+  initialDropInterval: 1000,
+  levelIncreaseSeconds: 60,
+  levelCap: 5,
+  dropIntervalDecreasePerLevel: 100,
+  minDropInterval: 250,
+  baseFallDuration: 2200,
+  fallDurationDecreasePerLevel: 140,
+  minFallDuration: 650,
+  powerupDuration: 10,
+  speedNoteFadeMs: 5000,
+  basketBaseSpeed: 0.2,
+  basketSpeedScale: 1.2,
+  nextLevelCountdownSeconds: 10, // show "Next level in X..." during last 10 seconds
+  powerupWarnSeconds: 5          // power-up timers turn red when <= this many seconds
+};
+
+/* === STATE === */
+let score = 0;
+let highScore = Number(localStorage.getItem('highScore') || 0);
+let missed = 0;
+let level = 1;
+let totalSeconds = 0;
+
+let gameRunning = false;
+let paused = false;
+let stopClickCount = 0;
+
+let dropInterval = CONFIG.initialDropInterval;
+let spawnTimerId = null;
+let levelTimerId = null;
+
+let shieldActive = false, shieldRemaining = 0, shieldTimerId = null;
+let doubleActive = false, doubleRemaining = 0, doubleTimerId = null;
+
+let vibrationOn = true;
+
+/* === DOM refs === */
+const gameArea = document.getElementById('gameArea');
+const basket = document.getElementById('basket');
+const scoreEl = document.getElementById('score');
+const highScoreEl = document.getElementById('highScore');
+const missedEl = document.getElementById('missed');
+const levelEl = document.getElementById('levelDisplay');
+const timeEl = document.getElementById('timeDisplay');
+const shieldTimerEl = document.getElementById('shieldTimer');
+const doubleTimerEl = document.getElementById('doubleTimer');
+const speedNoteEl = document.getElementById('speedNote');
+const nextLevelEl = document.getElementById('nextLevel');
+const popContainer = document.getElementById('popContainer');
+
+const overlay = document.getElementById('overlay');
+const startScreen = document.getElementById('startScreen');
+const pauseScreen = document.getElementById('pauseScreen');
+const startBtn = document.getElementById('startBtn');
+const resumeBtn = document.getElementById('resumeBtn');
+const stopFromOverlayBtn = document.getElementById('stopFromOverlay');
+
+const pauseBtn = document.getElementById('pauseBtn');
+const stopBtn = document.getElementById('stopBtn');
+const menuBtn = document.getElementById('menuBtn');
+const menuPanel = document.getElementById('menuPanel');
+
+const musicBtn = document.getElementById('musicBtn');
+const vibrateBtn = document.getElementById('vibrateBtn');
+const bgMusic = document.getElementById('bgMusic');
+
+/* init HUD */
+scoreEl.textContent = score;
+highScoreEl.textContent = highScore;
+missedEl.textContent = missed;
+levelEl.textContent = level;
+timeEl.textContent = '00:00';
+
+/* start screen animation */
+window.addEventListener('load', () => {
+  const title = document.getElementById('startTitle');
+  const cta = document.getElementById('startBtn');
+  setTimeout(()=> title.classList.add('show'), 120);
+  setTimeout(()=> cta.classList.add('show'), 420);
+});
+
+/* === Helpers === */
+// format mm:ss
+function formatTime(s){ const m = Math.floor(s/60).toString().padStart(2,'0'); const sec = (s%60).toString().padStart(2,'0'); return `${m}:${sec}`; }
+
+// short pop text by basket
+function showPop(text, color = '', duration = 900){
+  const el = document.createElement('div'); el.className = 'pop'; el.textContent = text;
+  el.style.left = Math.max(6, (basket.offsetLeft + basket.clientWidth/2 - 29)) + 'px';
+  el.style.top = Math.max(6, (basket.offsetTop - 18)) + 'px';
+  if (color) el.style.color = color; popContainer.appendChild(el);
+  requestAnimationFrame(()=> { el.style.opacity = '1'; el.style.transform = 'translateY(-18px)'; });
+  setTimeout(()=> { el.style.opacity = '0'; el.style.transform = 'translateY(-40px)'; setTimeout(()=> el.remove(), 350); }, duration);
+}
+function vib(ms){ if (vibrationOn && navigator.vibrate) navigator.vibrate(ms); }
+
+/* === Basket Movement (linear, scaled to fall duration) === */
+let basketTargetX = null;
+let basketMoving = false;
+function computeBasketMaxSpeed(fallDurationMs){
+  const base = CONFIG.basketBaseSpeed * (1000 / Math.max(300, fallDurationMs));
+  const pxPerSecond = Math.max(220, (base * CONFIG.basketSpeedScale * gameArea.clientWidth * 1.2));
+  return pxPerSecond;
+}
+/* NOTE: event handlers unchanged — clamping uses rect.width - basket.clientWidth so exact edge is reachable */
+gameArea.addEventListener('click', (ev)=>{ 
+  if (!gameRunning || paused) return; 
+  const rect = gameArea.getBoundingClientRect(); 
+  const x = ev.clientX - rect.left - (basket.clientWidth/2); 
+  // FIX: make sure we clamp using rect.width - basket.clientWidth exactly
+  basketTargetX = Math.max(0, Math.min(x, rect.width - basket.clientWidth)); 
+  basketMoving = true; 
+});
+window.addEventListener('mousemove', (ev)=>{ 
+  if (!gameRunning || paused) return; 
+  const rect = gameArea.getBoundingClientRect(); 
+  if (ev.clientY >= rect.top && ev.clientY <= rect.bottom && ev.clientX >= rect.left && ev.clientX <= rect.right){ 
+    const x = ev.clientX - rect.left - (basket.clientWidth/2); 
+    const clamped = Math.max(0, Math.min(x, rect.width - basket.clientWidth)); 
+    basket.style.left = clamped + 'px'; basketTargetX = null; basketMoving = false; 
+  }
+});
+gameArea.addEventListener('touchstart', (ev)=>{ 
+  if (!gameRunning || paused) return; 
+  const rect = gameArea.getBoundingClientRect(); 
+  const t = ev.touches[0]; 
+  const x = t.clientX - rect.left - (basket.clientWidth/2); 
+  basketTargetX = Math.max(0, Math.min(x, rect.width - basket.clientWidth)); 
+  basketMoving = true; 
+});
+
+function basketMoveLoop(){
+  if (!gameRunning) return;
+  if (!paused && basketMoving && basketTargetX !== null){
+    const fallDuration = Math.max(CONFIG.minFallDuration, CONFIG.baseFallDuration - (level-1) * CONFIG.fallDurationDecreasePerLevel);
+    const maxSpeedPxS = computeBasketMaxSpeed(fallDuration); // px/sec
+    const dt = 1/60; const movePx = maxSpeedPxS * dt;
+    const cur = parseFloat(getComputedStyle(basket).left || (gameArea.clientWidth/2 - basket.clientWidth/2));
+    const diff = basketTargetX - cur;
+    if (Math.abs(diff) <= movePx){ basket.style.left = basketTargetX + 'px'; basketMoving = false; basketTargetX = null; }
+    else { const dir = diff > 0 ? 1 : -1; basket.style.left = (cur + dir * movePx) + 'px'; }
+  }
+  if (gameRunning) requestAnimationFrame(basketMoveLoop);
+}
+
+/* === Spawning & Animating Items === */
+/* Active items tracked to properly handle pause/resume cleanup */
+const activeItems = new Set();
+
+/* spawn logic with weights similar to original */
+function spawnItem(){
+  if (!gameRunning || paused) return;
+  const rnd = Math.random();
+  let type = 'star';
+  if (rnd < 0.10) type = 'shield';
+  else if (rnd < 0.30) type = 'bomb';
+  else if (rnd < 0.35) type = 'lemon';
+
+  const el = document.createElement('div');
+  el.className = 'item';
+  el.dataset.type = type;
+  el.dataset.progress = '0';        // progress 0..1 used for pause/resume restore
+  el.dataset.paused = 'false';      // flag set when paused
+  const icons = { star:'⭐', bomb:'💣', lemon:'🍋', shield:'🛡️' };
+  el.textContent = icons[type];
+  const left = Math.floor(Math.random() * (gameArea.clientWidth - 30));
+  el.style.left = left + 'px';
+  el.style.top = '-40px';
+  gameArea.appendChild(el);
+  animateItem(el, type);
+}
+
+/* animate item with RAF — uses dataset.progress to freeze & resume precisely */
+function animateItem(el, type){
+  activeItems.add(el);
+  const totalDistance = gameArea.clientHeight + 80;
+  const raw = CONFIG.baseFallDuration - (level-1) * CONFIG.fallDurationDecreasePerLevel;
+  const duration = Math.max(CONFIG.minFallDuration, raw);
+
+  let start = null;
+  let stopped = false;
+
+  function step(ts){
+    if (!start) {
+      // if there was progress from previous pause (rare when we created new) use that
+      const p = parseFloat(el.dataset.progress || '0');
+      start = ts - p * duration;
+    }
+
+    if (!gameRunning){ cleanup(); return; }
+
+    // if item was previously paused, and we are currently paused - just set paused flag & return
+    if (paused){
+      // store progress and mark paused
+      const elapsed = ts - start;
+      const prog = Math.min(1, elapsed / duration);
+      el.dataset.progress = String(prog);
+      el.dataset.paused = 'true';
+      requestAnimationFrame(step); // keep calling step so that when resumed we re-enter and recalc
+      return;
+    } else {
+      // if previously paused, we must recompute start based on saved progress
+      if (el.dataset.paused === 'true'){
+        const saved = parseFloat(el.dataset.progress || '0');
+        start = ts - saved * duration;
+        el.dataset.paused = 'false';
+      }
+    }
+
+    const elapsed = ts - start;
+    const prog = Math.min(1, elapsed / duration);
+    // update progress dataset so we can restore if needed
+    el.dataset.progress = String(prog);
+
+    const y = prog * totalDistance;
+    el.style.transform = `translateY(${y}px)`;
+
+    if (prog < 1){
+      // collision check
+      if (checkCollision(el, basket)){
+        // caught
+        handleCatch(type);
+        showPopForType(type);
+        cleanup();
+        return;
+      }
+      requestAnimationFrame(step);
+    } else {
+      // reached bottom
+      cleanup();
+      if (type === 'star' && gameRunning && !paused){
+        missed++; missedEl.textContent = missed;
+        showPop('-1 (miss)', '#ffdddd', 700);
+        if (missed >= 20) gameArea.style.boxShadow = '0 0 30px rgba(255,0,0,0.35)';
+        if (missed >= 25) stopGame();
+      }
+    }
+  }
+
+  function cleanup(){
+    if (stopped) return;
+    stopped = true;
+    activeItems.delete(el);
+    el.remove();
+  }
+
+  requestAnimationFrame(step);
+}
+
+/* collision rect */
+function checkCollision(itemEl, basketEl){
+  if (!itemEl || !basketEl) return false;
+  const ir = itemEl.getBoundingClientRect();
+  const br = basketEl.getBoundingClientRect();
+  return !(ir.bottom < br.top || ir.top > br.bottom || ir.right < br.left || ir.left > br.right);
+}
+
+/* pop for type */
+function showPopForType(type){
+  if (type === 'star') showPop(doubleActive ? '+2' : '+1', '', 700);
+  else if (type === 'bomb') showPop(shieldActive ? '+1 (shielded)' : '💥 Bomb!', '#ff9b9b', 900);
+  else if (type === 'shield') showPop('Shield!', '', 900);
+  else if (type === 'lemon') showPop('Double!', '', 900);
+  vib(30);
+}
+
+/* === Power-ups (with pause-aware countdown) === */
+function activateShield(){
+  shieldActive = true;
+  shieldRemaining = CONFIG.powerupDuration;
+  shieldTimerEl.textContent = `🛡️ Shield: ${shieldRemaining}s`;
+  shieldTimerEl.classList.remove('hidden'); shieldTimerEl.classList.remove('warn');
+  if (shieldTimerId) clearInterval(shieldTimerId);
+  shieldTimerId = setInterval(()=> {
+    if (!gameRunning){ clearInterval(shieldTimerId); return; }
+    if (paused) return; // don't tick while paused
+    shieldRemaining--;
+    shieldTimerEl.textContent = `🛡️ Shield: ${shieldRemaining}s`;
+    // warn red if <= warn threshold
+    if (shieldRemaining <= CONFIG.powerupWarnSeconds) shieldTimerEl.classList.add('warn'); 
+    if (shieldRemaining <= 0){ clearInterval(shieldTimerId); shieldActive = false; shieldTimerEl.classList.add('hidden'); shieldTimerEl.classList.remove('warn'); }
+  }, 1000);
+}
+
+function activateDouble(){
+  doubleActive = true;
+  doubleRemaining = CONFIG.powerupDuration;
+  doubleTimerEl.textContent = `🍋 Double: ${doubleRemaining}s`;
+  doubleTimerEl.classList.remove('hidden'); doubleTimerEl.classList.remove('warn');
+  if (doubleTimerId) clearInterval(doubleTimerId);
+  doubleTimerId = setInterval(()=> {
+    if (!gameRunning){ clearInterval(doubleTimerId); return; }
+    if (paused) return;
+    doubleRemaining--;
+    doubleTimerEl.textContent = `🍋 Double: ${doubleRemaining}s`;
+    if (doubleRemaining <= CONFIG.powerupWarnSeconds) doubleTimerEl.classList.add('warn');
+    if (doubleRemaining <= 0){ clearInterval(doubleTimerId); doubleActive = false; doubleTimerEl.classList.add('hidden'); doubleTimerEl.classList.remove('warn'); }
+  }, 1000);
+}
+
+/* === Handle catches === */
+function handleCatch(type){
+  if (type === 'star'){ const pts = doubleActive ? 2 : 1; score += pts; scoreEl.textContent = score; }
+  else if (type === 'bomb'){ if (!shieldActive){ alert('You caught a bomb! Game Over!'); stopGame(); return; } else { const pts = doubleActive ? 2 : 1; score += pts; scoreEl.textContent = score; } }
+  else if (type === 'shield'){ if (!shieldActive) activateShield(); else { score += 1; scoreEl.textContent = score; } }
+  else if (type === 'lemon'){ if (!doubleActive){ score += 1; scoreEl.textContent = score; activateDouble(); } else { score += 2; scoreEl.textContent = score; } }
+}
+
+/* === Game lifecycle (start/stop/pause/resume) === */
+function startGame(){
+  // reset
+  score = 0; missed = 0; level = 1; totalSeconds = 0;
+  dropInterval = CONFIG.initialDropInterval;
+  scoreEl.textContent = score; missedEl.textContent = missed; levelEl.textContent = level; timeEl.textContent = formatTime(totalSeconds);
+  shieldActive = doubleActive = false; shieldRemaining = doubleRemaining = 0;
+  shieldTimerEl.classList.add('hidden'); doubleTimerEl.classList.add('hidden');
+  gameArea.style.boxShadow = ''; clearAllIntervals();
+
+  gameRunning = true; paused = false; stopClickCount = 0;
+  startScreen.style.display = 'none'; pauseScreen.style.display = 'none'; overlay.classList.add('hidden');
+  pauseBtn.style.display = 'inline-block'; stopBtn.style.display = 'inline-block';
+
+  // ensure basket loop runs
+  requestAnimationFrame(basketMoveLoop);
+
+  // spawn loop
+  spawnTimerId = setInterval(()=> { if (gameRunning && !paused) spawnItem(); }, dropInterval);
+
+  // level/time ticks every second
+  levelTimerId = setInterval(()=> {
+    if (!gameRunning || paused) return;
+    totalSeconds++; timeEl.textContent = formatTime(totalSeconds);
+
+    // seconds left to next level
+    const secondsToNext = CONFIG.levelIncreaseSeconds - (totalSeconds % CONFIG.levelIncreaseSeconds);
+    // show "Next level in X..." during last CONFIG.nextLevelCountdownSeconds seconds
+    if (secondsToNext <= CONFIG.nextLevelCountdownSeconds){
+      // show countdown below time with fade (we fade at 1 second)
+      nextLevelEl.textContent = `Next level in ${secondsToNext}...`;
+      nextLevelEl.classList.add('show');
+      if (secondsToNext === 1){
+        // fade out after a small delay so the new level appears smoothly; keep it subtle
+        nextLevelEl.style.transition = 'opacity .45s ease';
+        setTimeout(()=> nextLevelEl.classList.remove('show'), 400);
+      }
+    } else {
+      // hide when not in countdown
+      nextLevelEl.classList.remove('show');
+    }
+
+    // when time to level up
+    if (totalSeconds % CONFIG.levelIncreaseSeconds === 0){
+      if (level < CONFIG.levelCap){
+        level++; levelEl.textContent = level;
+        dropInterval = Math.max(CONFIG.minDropInterval, dropInterval - CONFIG.dropIntervalDecreasePerLevel);
+        // restart spawn interval with new dropInterval
+        if (spawnTimerId){ clearInterval(spawnTimerId); spawnTimerId = setInterval(()=> { if (gameRunning && !paused) spawnItem(); }, dropInterval); }
+        showSpeedNote(`Level ${level} (${dropInterval} ms)`);
+      } else {
+        // beyond cap: increase displayed level only but keep dropInterval
+        level++; levelEl.textContent = level;
+        showSpeedNote(`Level ${level} (${dropInterval} ms)`);
+      }
+    }
+  }, 1000);
+
+  // background music control
+  if (musicBtn.dataset.on !== 'false') bgMusic.play();
+}
+
+function stopGame(){
+  gameRunning = false; paused = false; clearAllIntervals();
+  for (const el of Array.from(activeItems)) el.remove(); activeItems.clear();
+  bgMusic.pause(); bgMusic.currentTime = 0;
+
+  setTimeout(()=> {
+    alert(`Game Over! Your score: ${score}\nTime Played: ${formatTime(totalSeconds)}`);
+    if (score > highScore){ highScore = score; localStorage.setItem('highScore', highScore); highScoreEl.textContent = highScore; setTimeout(()=> alert(`🎉 New high score: ${highScore}`), 20); }
+  }, 40);
+
+  // return to start screen
+  startScreen.style.display = 'flex'; pauseScreen.style.display = 'none'; overlay.classList.remove('hidden');
+  const title = document.getElementById('startTitle'); const cta = document.getElementById('startBtn');
+  title.classList.remove('show'); cta.classList.remove('show'); setTimeout(()=>{ title.classList.add('show'); cta.classList.add('show'); }, 120);
+  pauseBtn.style.display = 'none'; stopBtn.style.display = 'none';
+}
+
+/* Pause/resume that properly freezes items and timers */
+function togglePause(){
+  if (!gameRunning) return;
+  paused = !paused;
+  if (paused){
+    // show pause UI
+    startScreen.style.display = 'none';
+    pauseScreen.style.display = 'flex';
+    overlay.classList.remove('hidden');
+    pauseBtn.textContent = '▶️ Resume';
+    // When paused, each item's animateItem loop stores its progress in dataset.progress (see animateItem),
+    // so items remain visible exactly where they were.
+  } else {
+    // resume UI
+    overlay.classList.add('hidden');
+    pauseScreen.style.display = 'none';
+    pauseBtn.textContent = '⏸️ Pause';
+    // animateItem loops will detect paused=false and resume from dataset.progress, see animateItem logic
+  }
+}
+
+/* show speed note */
+let speedNoteTimeout = null;
+function showSpeedNote(text){
+  speedNoteEl.textContent = text;
+  speedNoteEl.classList.add('show');
+  clearTimeout(speedNoteTimeout);
+  speedNoteTimeout = setTimeout(()=> speedNoteEl.classList.remove('show'), CONFIG.speedNoteFadeMs);
+}
+
+/* clear intervals & timers on stop */
+function clearAllIntervals(){
+  if (spawnTimerId){ clearInterval(spawnTimerId); spawnTimerId = null; }
+  if (levelTimerId){ clearInterval(levelTimerId); levelTimerId = null; }
+  if (shieldTimerId){ clearInterval(shieldTimerId); shieldTimerId = null; }
+  if (doubleTimerId){ clearInterval(doubleTimerId); doubleTimerId = null; }
+}
+
+/* === UI wiring === */
+startBtn.addEventListener('click', ()=> { overlay.classList.add('hidden'); startScreen.style.display = 'none'; startGame(); });
+resumeBtn.addEventListener('click', ()=> { if (gameRunning){ paused = false; overlay.classList.add('hidden'); pauseBtn.textContent = '⏸️ Pause'; }});
+stopFromOverlayBtn.addEventListener('click', ()=> { stopGame(); });
+
+pauseBtn.addEventListener('click', ()=> { if (!gameRunning) return; togglePause(); });
+stopBtn.addEventListener('click', ()=> {
+  if (!gameRunning) return;
+  stopClickCount++;
+  if (stopClickCount === 2){ stopGame(); stopClickCount = 0; } else { stopBtn.textContent = 'Stop (click again)'; setTimeout(()=> { if (gameRunning) stopBtn.textContent = 'Stop'; }, 1800); }
+});
+
+menuBtn.addEventListener('click', ()=> { menuPanel.style.display = menuPanel.style.display === 'none' ? 'block' : 'none'; });
+
+musicBtn.dataset.on = 'true';
+musicBtn.addEventListener('click', ()=> { musicBtn.dataset.on = musicBtn.dataset.on === 'true' ? 'false' : 'true'; musicBtn.textContent = musicBtn.dataset.on === 'true' ? '🎵' : '🔇'; if (musicBtn.dataset.on === 'false'){ bgMusic.pause(); bgMusic.currentTime = 0; } });
+
+vibrateBtn.addEventListener('click', ()=> { vibrationOn = !vibrationOn; vibrateBtn.textContent = vibrationOn ? '🔔' : '🔕'; });
+
+window.addEventListener('keydown', (e) => { if (e.code === 'Space') { e.preventDefault(); if (gameRunning) togglePause(); } });
+
+window.addEventListener('beforeunload', ()=> { clearAllIntervals(); bgMusic.pause(); });
+
+/* === Ensure basket is centered initially by JS (works now that CSS transform is removed) === */
+(function initBasketPosition(){
+  const rect = gameArea.getBoundingClientRect();
+  const startX = Math.max(0, rect.width/2 - (basket.clientWidth/2));
+  basket.style.left = startX + 'px';
+})();
+</script>
+</body>
+</html>
