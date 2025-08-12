@@ -10,7 +10,87 @@
 
 <style>
 /* ================== Visual theme & layout ================== */
-:root{
+:root {
+  --bg-1: #0f2f66;
+  --bg-2: #2266d1;
+  --accent: #ffbf47;
+  --danger: #ff6060;
+  --hud-width: min(90vw, 480px); /* scales but caps for large screens */
+}
+
+body {
+  margin: 10px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  background: linear-gradient(180deg, var(--bg-1), var(--bg-2));
+  color: #fff;
+  -webkit-font-smoothing: antialiased;
+}
+
+h1 {
+  margin: 0;
+  font-size: clamp(16px, 3vw, 26px); /* adjusts between mobile/laptop */
+  font-weight: 700;
+}
+
+.game-area {
+  width: var(--hud-width);
+  aspect-ratio: 9 / 13; /* keeps proportions on all devices */
+  max-height: 80vh;
+  border-radius: 12px;
+  position: relative;
+  background: radial-gradient(circle at 20% 10%, rgba(255, 255, 255, 0.04), transparent 10%),
+              linear-gradient(180deg, rgba(255, 255, 255, 0.02), rgba(0, 0, 0, 0.06));
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  overflow: hidden;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.45);
+  user-select: none;
+}
+
+/* HUD text adjusts */
+.hud .left, .hud .center, .timers {
+  font-size: clamp(10px, 2.2vw, 14px);
+}
+
+/* Basket scales */
+.basket {
+  width: clamp(50px, 15%, 80px);
+  height: clamp(24px, 7%, 36px);
+  font-size: clamp(16px, 4vw, 22px);
+}
+
+/* Falling items scale */
+.item {
+  width: clamp(20px, 6%, 34px);
+  height: clamp(20px, 6%, 34px);
+  font-size: clamp(14px, 4vw, 24px);
+}
+
+/* Controls scale */
+.controls {
+  width: var(--hud-width);
+  gap: 8px;
+}
+.controls button {
+  font-size: clamp(12px, 2.5vw, 16px);
+  padding: clamp(6px, 2vh, 10px);
+}
+
+/* Mobile tweaks */
+@media (max-width: 480px) {
+  .hud .level-badge {
+    font-size: 11px;
+  }
+}
+
+/* Large screen tweaks */
+@media (min-width: 1024px) {
+  body {
+    margin: 20px;
+  }
+} 
   --bg-1:#0f2f66; --bg-2:#2266d1; --accent:#ffbf47; --danger:#ff6060;
   --hud-width:320px;
 }
@@ -42,7 +122,7 @@ h1{ margin:0; font-size:20px; font-weight:700; letter-spacing:.6px }
 .timer.warn { color:var(--danger); text-shadow:0 0 8px rgba(255,80,80,0.8); }
 
 /* speed note */
-.speed-note { position:absolute; left:10px; top:36px; font-size:12px; color:#eaf2ff; background:rgba(0,0,0,0.12); padding:4px 8px; border-radius:8px; opacity:0; transition:opacity .35s ease; z-index:160; }
+.speed-note { position:absolute; left:10px; top:3px; font-size:12px; color:#eaf2ff; background:rgba(0,0,0,0.12); padding:4px 8px; border-radius:8px; opacity:0; transition:opacity .35s ease; z-index:160; }
 .speed-note.show{ opacity:1; }
 
 /* Next-level countdown below time */
@@ -159,7 +239,8 @@ h1{ margin:0; font-size:20px; font-weight:700; letter-spacing:.6px }
   <hr style="border:none;border-top:1px solid rgba(255,255,255,0.06);margin:10px 0">
   <div style="font-size:13px">Version: <strong>1.0</strong></div>
   <div style="font-size:13px">Last updated: <strong>August 11, 2025</strong></div>
-  <div style="margin-top:8px;font-size:13px">Report bugs: <a href="mailto:kael.official20@gmail.com" style="color:var(--accent)">kael.official20@gmail.com</a></div>
+  <div style="font-size:13px">Made by: <strong>Norwell</strong></div>
+  <div style="margin-top:8px;font-size:13px">Report bugs: <a href="mailto:kael.official20@gmail.com" style="color:var(--accent)">Norwell.Finity@gmail.com</a></div>
 </div>
 
 <div class="scorebar">High Score: <span id="highScore">0</span> | Missed: <span id="missed">0</span>/25</div>
